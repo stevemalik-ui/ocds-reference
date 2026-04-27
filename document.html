@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCDS Data Structure — Find a Tender Reference</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+padding: 30px 20px;
+color: #333;
+}
+.container {
+max-width: 1400px;
+margin: 0 auto;
+background: white;
+border-radius: 8px;
+box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+padding: 40px;
+}
+h1 {
+font-size: 32px;
+color: #0b2d6d;
+margin-bottom: 8px;
+text-align: center;
+}
+.subtitle {
+text-align: center;
+color: #666;
+margin-bottom: 40px;
+font-size: 16px;
+}
+.schema-root {
+background: #e8f1f9;
+border-left: 5px solid #1b5299;
+padding: 20px;
+border-radius: 4px;
+margin-bottom: 30px;
+font-family: 'Consolas', 'Monaco', monospace;
+}
+.schema-root-label {
+font-weight: 700;
+color: #0b2d6d;
+font-size: 18px;
+margin-bottom: 10px;
+}
+.schema-root-desc {
+color: #555;
+font-size: 13px;
+line-height: 1.6;
+}
+.schema-section {
+margin-bottom: 30px;
+border: 1px solid #ddd;
+border-radius: 6px;
+overflow: hidden;
+}
+.section-header {
+background: #0b2d6d;
+color: white;
+padding: 16px 20px;
+cursor: pointer;
+display: flex;
+align-items: center;
+justify-content: space-between;
+font-weight: 600;
+font-size: 16px;
+transition: background 0.2s;
+}
+.section-header:hover {
+background: #1b3d8d;
+}
+.section-header.expanded {
+background: #1b5299;
+}
+.toggle-icon {
+display: inline-block;
+width: 20px;
+height: 20px;
+line-height: 20px;
+text-align: center;
+font-size: 14px;
+transition: transform 0.2s;
+}
+.section-header.expanded .toggle-icon {
+transform: rotate(180deg);
+}
+.section-content {
+display: none;
+padding: 20px;
+background: #fafbfc;
+}
+.section-header.expanded + .section-content {
+display: block;
+}
+.field-group {
+margin-bottom: 20px;
+padding-bottom: 20px;
+border-bottom: 1px solid #eee;
+}
+.field-group:last-child {
+border-bottom: none;
+margin-bottom: 0;
+padding-bottom: 0;
+}
+.field-name {
+font-family: 'Consolas', 'Monaco', monospace;
+font-weight: 700;
+color: #1b5299;
+font-size: 14px;
+margin-bottom: 4px;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.field-type {
+display: inline-block;
+padding: 2px 8px;
+background: #e0e9f5;
+color: #1b5299;
+border-radius: 3px;
+font-size: 11px;
+font-weight: 600;
+font-family: 'Consolas', monospace;
+margin-left: 8px;
+}
+.field-type.object {
+background: #fff4e6;
+color: #d97706;
+}
+.field-type.array {
+background: #f0fdf4;
+color: #16a34a;
+}
+.field-desc {
+color: #666;
+font-size: 13px;
+line-height: 1.5;
+margin-bottom: 8px;
+}
+.nested-fields {
+margin-left: 20px;
+padding-top: 12px;
+border-left: 2px solid #ddd;
+padding-left: 16px;
+}
+.nested-fields .field-group {
+margin-bottom: 12px;
+padding-bottom: 12px;
+}
+.nested-fields .field-name {
+font-size: 13px;
+}
+.nested-fields .field-desc {
+font-size: 12px;
+}
+.array-indicator {
+display: inline-block;
+padding: 0 6px;
+background: #f0fdf4;
+color: #16a34a;
+border-radius: 3px;
+font-size: 11px;
+font-weight: 600;
+margin-left: 6px;
+}
+.critical {
+background: #fee2e2;
+border-left: 3px solid #dc2626;
+padding: 12px;
+border-radius: 3px;
+margin-bottom: 12px;
+font-size: 13px;
+color: #991b1b;
+}
+.note {
+background: #fef3c7;
+border-left: 3px solid #f59e0b;
+padding: 12px;
+border-radius: 3px;
+margin-top: 12px;
+font-size: 12px;
+color: #92400e;
+}
+.legend {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+gap: 16px;
+margin-top: 40px;
+padding-top: 30px;
+border-top: 2px solid #eee;
+}
+.legend-item {
+display: flex;
+align-items: center;
+gap: 12px;
+}
+.legend-color {
+width: 24px;
+height: 24px;
+border-radius: 3px;
+flex-shrink: 0;
+}
+.legend-color.object { background: #fff4e6; border: 1px solid #d97706; }
+.legend-color.array { background: #f0fdf4; border: 1px solid #16a34a; }
+.legend-color.string { background: #e0e9f5; border: 1px solid #1b5299; }
+.legend-text { font-size: 13px; color: #666; }
+.footer {
+margin-top: 40px;
+padding-top: 20px;
+border-top: 1px solid #eee;
+text-align: center;
+font-size: 12px;
+color: #999;
+}
+@media (max-width: 768px) {
+.container { padding: 20px; }
+h1 { font-size: 24px; }
+.section-header { font-size: 14px; padding: 12px 16px; }
+.field-name { font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h1>OCDS Compiled Release Structure</h1>
+<p class="subtitle">Find a Tender Service — Complete Data Reference</p>
+
+<div class="schema-root">
+<div class="schema-root-label">compiledRelease {}</div>
+<div class="schema-root-desc">
+The top-level object returned by the OCDS API. Contains the current state of a single contracting process (OCID).
+Merges all notices (releases) into a single view. Array fields contain 0 or more items.
+</div>
+</div>
+
+<!-- SECTION 1: CORE IDENTIFIERS -->
+
+<div class="schema-section">
+<div class="section-header expanded">
+<span><strong>Core Identifiers & Metadata</strong></span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="field-group">
+<div class="field-name">
+ocid <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Open Contracting ID. Unique identifier for the contracting process. Prefix: <code>ocds-b5fd17-</code> followed by an 8-character identifier.
+</div>
+<div class="note">
+<strong>Critical for analysis:</strong> The OCID is the spine of the dataset. All notices, awards, and contracts for a single procurement share the same OCID. Use this to aggregate across notices and reconstruct timelines.
+</div>
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Release ID. Identifier for this compiled release (usually same as ocid, or may be versioned).
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+date <span class="field-type">string (ISO 8601)</span>
+</div>
+<div class="field-desc">
+Date when this release was published. Format: <code>YYYY-MM-DDTHH:MM:SSZ</code>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+version <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+OCDS version (e.g., "1.1.5"). Indicates which version of the OCDS standard was used.
+</div>
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 2: BUYER -->
+
+<div class="schema-section">
+<div class="section-header expanded">
+<span><strong>buyer {}</strong> — Contracting Authority</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="critical">
+⚠️ <strong>Overwrite semantics:</strong> The buyer field in a compiled release reflects the most recent notice published.
+If a Machinery of Government change occurs mid-procurement, you lose the original buyer attribution.
+Always pull the full record to reconstruct buyer history from releases[].
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Org ID. Format: <code>GB-GOR-CO</code> (Cabinet Office), <code>GB-NHS-XXXX</code>, <code>GB-COH-12345678</code> (Companies House).
+</div>
+<div class="note">
+<strong>Entity resolution challenge:</strong> No single canonical org ID. Same org may appear under different ID schemes across notices. Requires external matching against Companies House or GOV.UK org hierarchy.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+name <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Legal name of the contracting authority (e.g., "Cabinet Office", "NHS England").
+</div>
+</div>
+
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">
+details.scale <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+<code>"central" | "regional" | "local"</code> — Buyer size classification (rarely populated for buyers; mainly used for suppliers).
+</div>
+</div>
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 3: TENDER -->
+
+<div class="schema-section">
+<div class="section-header expanded">
+<span><strong>tender {}</strong> — Procurement Details</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Tender ID. Identifier for the procurement procedure within the contracting authority's system.
+</div>
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+title <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Plain-language title of the procurement (e.g., "Consultancy Services for Digital Transformation").
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+description <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Detailed description of what is being procured. Often lengthy free text.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+status <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Current procedure status: <code>planning | tender | awarded | complete | withdrawn | cancelled</code>
+</div>
+<div class="note">
+<strong>Below-threshold caveat:</strong> For below-threshold procurements, no closure notice is mandated. Status must be inferred from dates. See contracts[].period.endDate.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+procurementMethod <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+How the procurement was conducted: <code>open | limited | selective | direct</code>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+value <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Estimated procurement value (buyer's budget).
+</div>
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">amount <span class="field-type">number</span></div>
+<div class="field-desc">Numerical amount (e.g., 500000)</div>
+</div>
+<div class="field-group">
+<div class="field-name">currency <span class="field-type">string</span></div>
+<div class="field-desc">ISO 4217 code (e.g., "GBP")</div>
+</div>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+lots[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Subdivisions of the procurement. Each lot can have separate suppliers and values.
+A procurement may be competed as a single lot (length = 1) or multiple lots (length &gt; 1).
+</div>
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">id <span class="field-type">string</span></div>
+<div class="field-desc">Lot identifier (e.g., "lot-1")</div>
+</div>
+<div class="field-group">
+<div class="field-name">title <span class="field-type">string</span></div>
+<div class="field-desc">Plain-language lot name</div>
+</div>
+<div class="field-group">
+<div class="field-name">value <span class="field-type">object</span></div>
+<div class="field-desc">Lot-level budget {amount, currency}</div>
+</div>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+items[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Line items being procured. Each item has a CPV (Common Procurement Vocabulary) classification.
+</div>
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">id <span class="field-type">string</span></div>
+<div class="field-desc">Item identifier</div>
+</div>
+<div class="field-group">
+<div class="field-name">description <span class="field-type">string</span></div>
+<div class="field-desc">What is being bought</div>
+</div>
+<div class="field-group">
+<div class="field-name">
+classification <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+<code>{scheme: "CPV", id: "73200000", description: "..."}</code>
+<br/>CPV is the EU procurement classification. 8-digit code. Used for filtering and spend analysis by category.
+</div>
+</div>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+tenderPeriod <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+When suppliers can submit proposals. {startDate, endDate} in ISO 8601 format.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+documentDeadline <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+When supporting documentation must be submitted (if different from endDate).
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+hasEnquiries <span class="field-type">boolean</span>
+</div>
+<div class="field-desc">
+Whether clarification questions were received from potential suppliers.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+awardCriteria <span class="field-type">array</span>
+</div>
+<div class="field-desc">
+How the winner will be selected (e.g., "lowest cost" vs "most economically advantageous tender").
+</div>
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 4: AWARDS -->
+
+<div class="schema-section">
+<div class="section-header expanded">
+<span><strong>awards[] </strong><span class="array-indicator">array</span>— Contract Awards</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Award identifier (e.g., "award-001"). May correspond to a lot or represent a standalone award in an open procedure.
+</div>
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+status <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+<code>pending | active | cancelled</code> — Current state of the award.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+date <span class="field-type">string (ISO 8601)</span>
+</div>
+<div class="field-desc">
+Date the award decision was made (contract signature date or award notification date).
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+value <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Contract award value. {amount, currency}. The actual value paid to the supplier(s).
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+suppliers[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+List of organisations that won this award. May be 1 (sole supplier) or &gt;1 (consortium/framework).
+</div>
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Supplier organisation ID. Format: <code>GB-COH-12345678</code> (Companies House), <code>GB-SIRL-XXXXX</code>, or free text.
+</div>
+</div>
+<div class="field-group">
+<div class="field-name">
+name <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Legal name of the supplier.
+</div>
+</div>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+contractPeriod <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Planned or actual contract duration. {startDate, endDate, durationInDays (optional), maxExtentDate (optional)}
+</div>
+<div class="note">
+<strong>Inference of closure:</strong> For below-threshold contracts with no termination notice, if today &gt; maxExtentDate, status should be inferred as "assumed completed".
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+contractID <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Reference to a contracts[] entry (by contracts[].id). Links award to implementation.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+amendment <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Changes to the award post-signature (scope changes, price changes, extension). {date, rationale, description}
+</div>
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 5: CONTRACTS -->
+
+<div class="schema-section">
+<div class="section-header expanded">
+<span><strong>contracts[] </strong><span class="array-indicator">array</span>— Contract Implementation</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Contract identifier (e.g., "contract-001"). Should correspond to a contracts[].id referenced by awards[].contractID.
+</div>
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+awardID <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Reference back to the award (awards[].id) that this contract implements.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+status <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+<code>pending | active | terminated | complete</code> — Implementation status.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+period <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Contract duration. {startDate, endDate, durationInDays (optional), maxExtentDate (optional)}
+</div>
+<div class="note">
+<strong>Data quality:</strong> startDate and endDate are often sparse, especially for legacy contracts. maxExtentDate (the latest possible end including extensions) is more reliable for status inference.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+value <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Contract value. May differ from awards[].value if scope or price changed post-award.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+implementation <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+<strong>Emerging data:</strong> Contract performance tracking and Section 70 payment transparency. Currently sparse but growing under PA23.
+</div>
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">
+milestones[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Project milestones and deliverables. Rarely populated. {id, title, description, dueDate, status}
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+documents[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Links to contract documents (PDF specifications, SLAs, etc.). Mostly absent in current data.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+transactions[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+<strong>Section 70 Payment Data (Coming 2025):</strong> Payment records will be published here.
+{id, date, amount, payer, payee, status: "pending|successful|failed"} — Links invoice dates to payment dates for prompt-pay compliance tracking.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+metrics[] <span class="array-indicator">array</span> <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+KPI/performance metrics reported against the contract. {id, title, value, period}.
+<br/><strong>Data quality warning:</strong> The regulation permits KPI definitions to change at each reporting cycle — makes time-series comparison very difficult.
+</div>
+</div>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+amendment <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Changes to contract post-signature. {date, changes (free text), rationale}
+</div>
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 6: PARTIES -->
+
+<div class="schema-section">
+<div class="section-header expanded">
+<span><strong>parties[] </strong><span class="array-indicator">array</span>— All Organisations</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="critical">
+⚠️ <strong>Non-exclusive roles:</strong> An organisation can appear multiple times in parties[] with different roles.
+A framework owner may appear as both "buyer" and "procuringEntity". A supplier may appear in multiple awards with different roles.
+Deduplication logic required for spend and supplier analysis.
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Organisation ID. Same format as buyer.id (GB-GOR, GB-NHS, GB-COH, etc.).
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+name <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Legal name of the organisation.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+roles[] <span class="array-indicator">array</span> <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+What function(s) the organisation performed in this process. Possible values:
+<ul style="margin: 8px 0 0 20px; color: #555; font-size: 12px;">
+<li><code>buyer</code> — Contracting authority</li>
+<li><code>tenderer</code> — Submitted a proposal</li>
+<li><code>supplier</code> — Won a contract</li>
+<li><code>procuringEntity</code> — Entity for which the buyer is buying (often same as buyer)</li>
+<li><code>payee</code> — Receives payment</li>
+<li><code>payer</code> — Makes payment (government entity)</li>
+</ul>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+details <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Additional organisation attributes.
+</div>
+<div class="nested-fields">
+<div class="field-group">
+<div class="field-name">
+scale <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+<code>"sme" | "large" | "vcse" | "micro" | "startup"</code> — Size/type classification of the organisation.
+Critical field for SME/VCSE spend analytics.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+website <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Organisation website URL (rarely populated).
+</div>
+</div>
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+address <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Registered address. {streetAddress, locality, region, postalCode, countryName}
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+contactPoint <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Contact details for the organisation. {name, email, telephone, faxNumber, url}
+</div>
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 7: PLANNING -->
+
+<div class="schema-section">
+<div class="section-header">
+<span><strong>planning {}</strong> — Pre-Market & Budget</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="field-group">
+<div class="field-name">
+budget <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Budget allocated for the procurement. {amount, currency} — Often sparse. Partially overlaps with tender.value.
+</div>
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+rationale <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Why the procurement is being conducted (business justification). Optional, rarely populated.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+documents <span class="field-type">array</span>
+</div>
+<div class="field-desc">
+Links to business case or strategy documents. Mostly absent.
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+milestone <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Planned procurement milestone dates. {description, dueDate, status} — Often sparse.
+</div>
+</div>
+
+<div class="note">
+<strong>Data maturity:</strong> The planning block is structurally sound but has very low coverage under PA23.
+As contracting authorities adopt planning notices, this will become richer. Currently not a reliable source for spend forecasting.
+</div>
+</div>
+```
+
+</div>
+
+<!-- SECTION 8: RELATED PROCESSES -->
+
+<div class="schema-section">
+<div class="section-header">
+<span><strong>relatedProcesses[] </strong><span class="array-indicator">array</span>— Procurement Links</span>
+<span class="toggle-icon">▼</span>
+</div>
+<div class="section-content">
+<div class="field-group">
+<div class="field-name">
+id <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Identifier for the related process entry.
+</div>
+</div>
+
+```
+<div class="field-group">
+<div class="field-name">
+relationship <span class="field-type">string</span>
+</div>
+<div class="field-desc">
+Nature of the relationship: <code>parent | child | renewal | tender</code> (etc.)
+</div>
+</div>
+
+<div class="field-group">
+<div class="field-name">
+relatedProcessID <span class="field-type">object</span>
+</div>
+<div class="field-desc">
+Reference to another OCID. {scheme: "OCDS", id: "ocds-b5fd17-00000999"}
+</div>
+</div>
+
+<div class="note">
+<strong>Use case:</strong> Link framework calls-off to the parent framework OCID, or link a renewal procure to its predecessor.
+Currently sparse — frameworks should link back via relatedProcesses, but coverage varies.
+</div>
+</div>
+```
+
+</div>
+
+<!-- LEGEND -->
+
+<div class="legend">
+<div class="legend-item">
+<div class="legend-color object"></div>
+<div class="legend-text"><strong>Object {}</strong> — Single nested structure</div>
+</div>
+<div class="legend-item">
+<div class="legend-color array"></div>
+<div class="legend-text"><strong>Array []</strong> — 0, 1, or many items</div>
+</div>
+<div class="legend-item">
+<div class="legend-color string"></div>
+<div class="legend-text"><strong>String/Scalar</strong> — Primitive data type</div>
+</div>
+</div>
+
+<div class="footer">
+<p>
+<strong>OCDS Implementation Reference for Find a Tender Service</strong><br>
+Based on OCDS 1.1.5 — Updated April 2025<br>
+<a href="https://standard.open-contracting.org" style="color: #0b2d6d; text-decoration: none;">OCDS Documentation</a> |
+<a href="https://data.open-contracting.org" style="color: #0b2d6d; text-decoration: none;">OCP Data Registry</a>
+</p>
+</div>
+</div>
+
+<script>
+document.querySelectorAll('.section-header').forEach(header => {
+header.addEventListener('click', function() {
+this.classList.toggle('expanded');
+});
+});
+</script>
+
+</body>
+</html>
